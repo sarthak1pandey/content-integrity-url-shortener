@@ -1,4 +1,4 @@
-# LinkGuard — Content-Integrity URL Shortener
+# Shortt — Content-Integrity URL Shortener
 
 A URL shortening service that cryptographically verifies destination page content on every click. Detects and notifies users when shared content has been tampered with or modified.
 
@@ -7,6 +7,7 @@ A URL shortening service that cryptographically verifies destination page conten
 ## The Invention
 
 When you shorten a URL, this system:
+
 1. **Fetches** the destination page
 2. **Normalizes** it (removes ads, timestamps, nav — volatile elements that aren't real content)
 3. **Hashes** the normalized content with SHA-256 (stores this as the "baseline")
@@ -21,8 +22,9 @@ This combination is **not patented anywhere in the world** (verified across USPT
 ## Quick Start
 
 ### Prerequisites
-- Node.js 16 or higher → https://nodejs.org
-- npm (comes with Node.js)
+
+* Node.js 16 or higher → https://nodejs.org
+* npm (comes with Node.js)
 
 ### Run Locally
 
@@ -40,72 +42,63 @@ npm start
 ```
 
 For development with auto-reload:
+
 ```bash
 npm run dev
 ```
+
+---
+
 ## Project Structure
 
 ```
-link-integrity/
-├── server.js              ← Express server, all routes
+shortt/
+├── server.js
 ├── src/
-│   ├── database.js        ← SQLite initialization & schema
-│   ├── crawler.js         ← Web fetching & normalization pipeline
-│   ├── linkService.js     ← Core business logic (THE INVENTION)
-│   └── utils.js           ← SHA-256, short code generator, helpers
+│   ├── database.js
+│   ├── crawler.js
+│   ├── linkService.js
+│   └── utils.js
 ├── public/
-│   ├── index.html         ← Landing page + URL shortener
-│   ├── dashboard.html     ← All links dashboard
-│   ├── redirect.html      ← Integrity check overlay (shown on every click)
-│   ├── link.html          ← Individual link stats + modification history
-│   ├── css/style.css      ← Complete design system
-│   └── js/app.js          ← Shared JS utilities
-├── data/                  ← SQLite database (auto-created)
-├── .env                   ← Your environment variables
-└── railway.toml           ← One-click Railway deployment config
+│   ├── index.html
+│   ├── dashboard.html
+│   ├── redirect.html
+│   ├── link.html
+│   ├── css/style.css
+│   └── js/app.js
+├── .env
+└── package.json
 ```
 
 ---
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/shorten` | Create a short link + take content snapshot |
-| `GET`  | `/api/check/:code` | **Core invention** — re-check integrity on click |
-| `GET`  | `/api/stats/:code` | Full stats + modification history |
-| `GET`  | `/api/links` | All links (dashboard) |
-| `DELETE` | `/api/links/:code` | Delete a link |
-| `GET`  | `/api/health` | Health check for deployment platforms |
+| Method   | Endpoint           | Description                                 |
+| -------- | ------------------ | ------------------------------------------- |
+| `POST`   | `/api/shorten`     | Create a short link + take content snapshot |
+| `GET`    | `/api/check/:code` | Re-check integrity on click                 |
+| `GET`    | `/api/stats/:code` | Full stats + modification history           |
+| `GET`    | `/api/links`       | All links (dashboard)                       |
+| `DELETE` | `/api/links/:code` | Delete a link                               |
+| `GET`    | `/api/health`      | Health check                                |
 
-### Example: Shorten a URL
+---
+
+## Example: Shorten a URL
+
 ```bash
 curl -X POST http://localhost:3000/api/shorten \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com/article"}'
 ```
 
-### Example: Check Integrity
+---
+
+## Example: Check Integrity
+
 ```bash
 curl http://localhost:3000/api/check/abc1234
-```
-
-Response:
-```json
-{
-  "success": true,
-  "data": {
-    "shortCode": "abc1234",
-    "originalUrl": "https://example.com/article",
-    "integrityStatus": "UNCHANGED",
-    "hashMatch": true,
-    "baselineHash": "3f4a9c2b...",
-    "currentHash": "3f4a9c2b...",
-    "modificationCount": 0,
-    "createdAt": "2025-03-20 14:30:00",
-    "clickCount": 12
-  }
-}
 ```
 
 ---
@@ -113,33 +106,17 @@ Response:
 ## Database Schema
 
 ```sql
--- Main links table
 links (
-  shortCode TEXT,       -- e.g. "k3mx9pz"
-  originalUrl TEXT,     -- destination URL
-  title TEXT,           -- page title at creation
-  baselineHash TEXT,    -- SHA-256 of normalized content at creation
-  contentLength INT,    -- length of normalized content
-  createdAt TEXT,       -- creation timestamp
-  clickCount INT,       -- total clicks
-  modificationCount INT,-- detected content changes
-  lastModifiedAt TEXT,  -- when last change was detected
-  lastCheckedAt TEXT    -- when last integrity check ran
-)
-
--- Every detected change is logged
-modifications (
-  shortCode TEXT,       -- which link
-  detectedAt TEXT,      -- when detected
-  previousHash TEXT,    -- hash before change
-  newHash TEXT          -- hash after change
-)
-
--- Click analytics
-clicks (
-  shortCode TEXT,       -- which link
-  clickedAt TEXT,       -- when
-  integrityStatus TEXT  -- what the check found
+  shortCode TEXT,
+  originalUrl TEXT,
+  title TEXT,
+  baselineHash TEXT,
+  contentLength INT,
+  createdAt TEXT,
+  clickCount INT,
+  modificationCount INT,
+  lastModifiedAt TEXT,
+  lastCheckedAt TEXT
 )
 ```
 
@@ -147,21 +124,28 @@ clicks (
 
 ## The Normalization Pipeline
 
-The key technical challenge: web pages have **volatile elements** that change constantly without meaningful content changes (ad slots, timestamps, cookie banners, social counts). If we hashed the raw page, these would cause constant false "Modified" alerts.
+Removes:
 
-The pipeline removes:
-- Scripts, styles, iframes
-- Navigation, header, footer
-- Advertisement elements (`[class*="ad-"]`, etc.)
-- Cookie/consent banners
-- Timestamps and date elements
-- Social share counts
-- Sidebar content
-- Comment sections
-- Related articles recommendations
+* Scripts, styles, iframes
+* Navigation, header, footer
+* Ads & cookie banners
+* Timestamps & dynamic elements
+* Social counts & sidebars
 
-Only the **article body / main content** is hashed. This means only actual editorial content changes (rewrites, deletions, insertions) trigger a modification alert.
+Only **core content** is hashed → reduces false positives.
 
 ---
 
-*Built with Node.js, Express, SQLite, Cheerio, and Axios.*
+## Tech Stack
+
+* Node.js
+* Express
+* Supabase (PostgreSQL)
+* Cheerio
+* Axios
+
+---
+
+## Branding
+
+**Shortt (shortt.it)** — Short links you can trust.
