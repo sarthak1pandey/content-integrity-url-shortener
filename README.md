@@ -14,6 +14,7 @@ When you shorten a URL, this system:
 3. **Hashes** the normalized content with SHA-256 (stores this as the "baseline")
 4. On **every click**, re-fetches, re-hashes, compares with baseline
 5. Shows the clicker a **trust indicator**: ✓ Unchanged or ⚠ Modified
+6. Optionally **generates a QR code** for easy offline-to-online secure sharing
 
 This combination is **not patented anywhere in the world** (verified across USPTO, WIPO, Google Patents, Lens.org, Espacenet).
 
