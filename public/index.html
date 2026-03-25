@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkGuard — Content-Integrity URL Shortener</title>
+  <meta name="description" content="Every link you share is cryptographically verified. Detect if destination content changes after sharing.">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ── Hero ── */
+    .hero {
+      padding: 100px 0 60px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+      color: var(--cyan); letter-spacing: 0.16em; text-transform: uppercase;
+      margin-bottom: 20px; display: block;
+    }
+    .hero h1 {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 60%, #ff6b6b 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.2rem; color: var(--text-dim); max-width: 560px;
+      margin: 0 auto 48px; line-height: 1.7;
+    }
+
+    /* ── Shortener Box ── */
+    .shortener-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 660px; margin: 0 auto 60px;
+      position: relative;
+    }
+    .shortener-box::before {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 21px;
+      background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(224,64,251,0.1), transparent);
+      z-index: -1;
+    }
+    .shortener-label {
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 12px; display: block;
+    }
+
+    /* ── Result Card ── */
+    .result-card {
+      max-width: 660px; margin: 0 auto 32px;
+      display: none;
+    }
+    .result-card.visible { display: block; animation: fadeIn 0.4s ease; }
+    .result-url-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 16px 20px;
+      background: var(--surface-2); border-radius: 12px;
+      border: 1px solid var(--border-2);
+      margin-bottom: 16px;
+    }
+    .short-url {
+      font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700;
+      color: var(--cyan); flex: 1;
+    }
+    .original-url-preview {
+      font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;
+    }
+    .hash-row { margin-bottom: 12px; }
+    .hash-label {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 80px 0;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+    .feature-card {
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: all var(--transition);
+    }
+    .feature-card:hover {
+      border-color: rgba(0,229,255,0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin-bottom: 16px;
+    }
+    .feature-icon-1 { background: var(--cyan-dim); }
+    .feature-icon-2 { background: var(--green-dim); }
+    .feature-icon-3 { background: var(--purple-dim); }
+    .feature-card h3 {
+      font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.88rem; line-height: 1.6; color: var(--text-dim);
+    }
+
+    /* ── How it works ── */
+    .how-it-works { padding: 80px 0; }
+    .steps { display: flex; flex-direction: column; gap: 0; max-width: 680px; margin: 0 auto; margin-top: 48px; }
+    .step {
+      display: flex; gap: 24px; padding: 24px 0;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute; left: 19px; top: 60px; bottom: 0;
+      width: 2px; background: var(--border);
+    }
+    .step-num {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700;
+      background: var(--surface-2); border: 1px solid var(--border-2);
+      color: var(--cyan); z-index: 1;
+    }
+    .step-content h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .step-content p  { font-size: 0.88rem; color: var(--text-dim); line-height: 1.6; }
+
+    /* ── Patent Notice ── */
+    .patent-notice {
+      background: linear-gradient(135deg, rgba(0,229,255,0.04), rgba(224,64,251,0.03));
+      border: 1px solid rgba(0,229,255,0.12);
+      border-radius: var(--radius-lg); padding: 24px 32px;
+      display: flex; align-items: center; gap: 20px;
+      margin: 40px 0;
+    }
+    .patent-icon { font-size: 2rem; flex-shrink: 0; }
+    .patent-text { font-size: 0.85rem; color: var(--text-dim); line-height: 1.6; }
+    .patent-text strong { color: var(--text); }
+
+    /* ── Loading state ── */
+    .loading-state {
+      display: none; flex-direction: column; align-items: center;
+      gap: 16px; padding: 32px; text-align: center;
+    }
+    .loading-state.visible { display: flex; }
+    .loading-text {
+      font-family: var(--font-mono); font-size: 0.85rem; color: var(--cyan);
+    }
+    .loading-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* ── Recent links ── */
+    .recent-section { padding: 0 0 80px; }
+    .recent-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; }
+
+    /* ── QR Code ── */
+    .qr-container {
+      max-width: 660px; margin: 0 auto 32px;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    .qr-container.visible { display: block; }
+    .qr-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      position: relative;
+    }
+    .qr-inner::before {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 17px;
+      background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(224,64,251,0.08), transparent);
+      z-index: -1;
+    }
+    .qr-header {
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 20px; display: block;
+    }
+    .qr-canvas-wrap {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      display: inline-block;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    .qr-canvas-wrap canvas {
+      display: block;
+    }
+    .qr-url-label {
+      font-family: var(--font-mono); font-size: 0.82rem;
+      color: var(--cyan); margin-bottom: 20px;
+    }
+    .qr-actions {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .hero { padding: 60px 0 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span>Link</span><span class="dot">Guard</span>
+      <span class="brand-badge">Patent Demo</span>
+    </div>
+    <div class="navbar-links">
+      <a href="/" class="active">Shorten</a>
+      <a href="/dashboard">Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container-sm">
+      <span class="hero-eyebrow fade-in">Content-Integrity-Aware URL Shortener</span>
+      <h1 class="fade-in fade-in-delay-1">
+        Share Links That<br>
+        <span class="gradient">Can't Lie</span>
+      </h1>
+      <p class="hero-sub fade-in fade-in-delay-2">
+        Every click cryptographically verifies the destination page hasn't changed since you shared it. If the content was tampered with, your recipients will know.
+      </p>
+
+      <!-- Shortener -->
+      <div class="shortener-box fade-in fade-in-delay-3">
+        <span class="shortener-label">// Enter any URL to protect</span>
+        <div class="input-wrap" id="inputWrap">
+          <input
+            type="url"
+            id="urlInput"
+            placeholder="https://example.com/article..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button class="btn btn-primary" id="shortenBtn" onclick="handleShorten()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Protect &amp; Shorten
+          </button>
+        </div>
+        <p class="mt-8" style="font-size:0.78rem; color:var(--text-muted); text-align:center">
+          We'll take a cryptographic snapshot of the page and verify it on every click
+        </p>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Fetching page content...</div>
+        <div class="loading-sub">Running normalization pipeline &amp; computing SHA-256 hash</div>
+      </div>
+
+      <!-- Result Card -->
+      <div class="result-card card card-glow" id="resultCard">
+        <div class="flex-between mb-16">
+          <span class="section-tag" style="margin:0">Link Created</span>
+          <span id="resultBadge"></span>
+        </div>
+
+        <div class="result-url-row">
+          <span class="short-url" id="resultShortUrl"></span>
+          <button class="btn btn-sm btn-outline" onclick="copyShortUrl(this)" id="copyBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+          <a class="btn btn-sm btn-ghost" id="statsLink" href="#">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Stats
+          </a>
+          <button class="btn btn-sm btn-outline" id="qrBtn" onclick="generateQR()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><line x1="21" y1="14" x2="21" y2="14.01"/><line x1="21" y1="21" x2="21" y2="21.01"/><line x1="17" y1="21" x2="17" y2="21.01"/><line x1="17" y1="17" x2="21" y2="17"/></svg>
+            Generate QR
+          </button>
+        </div>
+
+        <div class="original-url-preview" id="resultOriginalUrl"></div>
+        <div class="original-url-preview" id="resultTitle" style="color:var(--text-dim)"></div>
+
+        <div class="hash-row">
+          <div class="hash-label">Baseline Content Hash (SHA-256) — stored at creation</div>
+          <div class="hash-display" id="resultHash"></div>
+        </div>
+
+        <div class="flex gap-12 mt-16" style="flex-wrap:wrap">
+          <div style="font-size:0.82rem; color:var(--text-muted)">
+            <span style="color:var(--text-dim)">Created</span> <span id="resultCreatedAt"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Container -->
+      <div class="qr-container" id="qrContainer">
+        <div class="qr-inner">
+          <span class="qr-header">// QR Code</span>
+          <div class="qr-canvas-wrap">
+            <canvas id="qrCanvas"></canvas>
+          </div>
+          <div class="qr-url-label" id="qrUrlLabel"></div>
+          <div class="qr-actions">
+            <button class="btn btn-sm btn-primary" onclick="downloadQR()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download QR
+            </button>
+            <button class="btn btn-sm btn-ghost" onclick="closeQR()">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Patent Notice -->
+  <div class="container">
+    <div class="patent-notice fade-in">
+      <div class="patent-icon">🔐</div>
+      <div class="patent-text">
+        <strong>Patent Pending — VIT Vellore (IPR &amp; TT Cell)</strong><br>
+        This invention detects content changes in URL-shortened destinations using cryptographic hashing. The normalization pipeline, modification tracking, and user-facing integrity indicator are novel and unpatented combinations.
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-tag">Core Invention</span>
+        <h2 style="font-size:2rem; font-weight:800; letter-spacing:-0.02em">
+          Three pillars of link integrity
+        </h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card fade-in fade-in-delay-1">
+          <div class="feature-icon feature-icon-1">📸</div>
+          <h3>Cryptographic Snapshot</h3>
+          <p>At creation, we fetch your destination page, normalize the content, and compute a SHA-256 hash. This is your tamper-evident seal.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-delay-2">
+          <div class="feature-icon feature-icon-2">🔍</div>
+          <h3>Real-Time Verification</h3>
+          <p>Every single click re-fetches the destination and recomputes the hash. Compared instantly to the baseline — in milliseconds.</p>
+        </div>
+        <div class="feature-card fade-in fade-in-delay-3">
+          <div class="feature-icon feature-icon-3">📊</div>
+          <h3>Modification History</h3>
+          <p>Every detected change is logged with a timestamp. See exactly how many times and when a page was modified since you shared it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works">
+    <div class="container">
+      <div class="text-center mb-12">
+        <span class="section-tag">Technical Process</span>
+        <h2 style="font-size:2rem; font-weight:800; letter-spacing:-0.02em">How it works</h2>
+      </div>
+      <div class="steps">
+        <div class="step fade-in">
+          <div class="step-num">01</div>
+          <div class="step-content">
+            <h3>You submit a URL</h3>
+            <p>Our system fetches the destination page using a headless crawler. JavaScript-rendered content is captured for accuracy.</p>
+          </div>
+        </div>
+        <div class="step fade-in fade-in-delay-1">
+          <div class="step-num">02</div>
+          <div class="step-content">
+            <h3>Normalization Pipeline</h3>
+            <p>Volatile elements are stripped: ads, timestamps, navigation, cookie banners, sidebars, social counters. Only meaningful content remains.</p>
+          </div>
+        </div>
+        <div class="step fade-in fade-in-delay-2">
+          <div class="step-num">03</div>
+          <div class="step-content">
+            <h3>SHA-256 Baseline Hash</h3>
+            <p>The normalized content is cryptographically hashed using SHA-256. This 64-character fingerprint is stored with your short link.</p>
+          </div>
+        </div>
+        <div class="step fade-in fade-in-delay-3">
+          <div class="step-num">04</div>
+          <div class="step-content">
+            <h3>Every click triggers re-verification</h3>
+            <p>When someone clicks your short link, we re-fetch and re-hash the destination page in real time. Hash comparison takes milliseconds.</p>
+          </div>
+        </div>
+        <div class="step fade-in fade-in-delay-4">
+          <div class="step-num">05</div>
+          <div class="step-content">
+            <h3>Integrity Indicator delivered</h3>
+            <p>Before redirecting, the user sees a clear trust signal: ✓ Unchanged since shared, or ⚠ Modified N times. Then they proceed to the destination.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Links -->
+  <section class="recent-section">
+    <div class="container">
+      <div class="flex-between mb-24">
+        <h2 class="recent-title" style="margin:0">Recent Links</h2>
+        <a href="/dashboard" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      <div id="recentLinks">
+        <div class="empty-state">
+          <div class="empty-icon">🔗</div>
+          <p>No links yet. Shorten your first URL above.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="border-top: 1px solid var(--border); padding: 32px 0; text-align:center">
+    <div class="container">
+      <p style="font-size:0.82rem; color:var(--text-muted)">
+        LinkGuard — Content-Integrity URL Shortener &nbsp;|&nbsp;
+        Patent Filing: VIT Vellore IPR &amp; TT Cell &nbsp;|&nbsp;
+        <span style="font-family:var(--font-mono)">Invention Disclosure No. 02-IPR-R003</span>
+      </p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let currentShortUrl = '';
+
+    // ── Shorten handler ──
+    async function handleShorten() {
+      const input = document.getElementById('urlInput');
+      const url = input.value.trim();
+
+      if (!url) {
+        input.focus();
+        showToast('Please enter a URL', 'error');
+        return;
+      }
+
+      // Show loading
+      document.getElementById('shortenBtn').disabled = true;
+      document.getElementById('resultCard').classList.remove('visible');
+      const loadingState = document.getElementById('loadingState');
+      const loadingText = document.getElementById('loadingText');
+      loadingState.classList.add('visible');
+
+      const steps = [
+        'Fetching page content...',
+        'Running normalization pipeline...',
+        'Computing SHA-256 hash...',
+        'Storing baseline snapshot...'
+      ];
+      let step = 0;
+      const stepInterval = setInterval(() => {
+        if (step < steps.length - 1) {
+          step++;
+          loadingText.textContent = steps[step];
+        }
+      }, 800);
+
+      try {
+        const res = await API.shorten(url);
+        clearInterval(stepInterval);
+        loadingState.classList.remove('visible');
+        document.getElementById('shortenBtn').disabled = false;
+
+        if (!res.success) {
+          showToast(res.error || 'Failed to shorten URL', 'error');
+          return;
+        }
+
+        const d = res.data;
+        currentShortUrl = d.shortUrl;
+
+        // Populate result card
+        document.getElementById('resultShortUrl').textContent = d.shortUrl.replace('https://', '').replace('http://', '');
+        document.getElementById('resultOriginalUrl').textContent = '→ ' + truncateUrl(d.originalUrl, 70);
+        document.getElementById('resultTitle').textContent = '📄 ' + d.title;
+        document.getElementById('resultHash').textContent = d.baselineHash;
+        document.getElementById('resultCreatedAt').textContent = formatDate(d.createdAt);
+        document.getElementById('resultBadge').innerHTML = statusBadge('UNCHANGED');
+        document.getElementById('statsLink').href = `/link/${d.shortCode}`;
+
+        if (d.isExisting) {
+          showToast('This URL was already shortened — returning existing link', 'info');
+        } else {
+          showToast('Link protected & shortened successfully!', 'success');
+        }
+
+        // Hide QR if previously shown
+        document.getElementById('qrContainer').classList.remove('visible');
+
+        document.getElementById('resultCard').classList.add('visible');
+        loadRecentLinks();
+      } catch (err) {
+        clearInterval(stepInterval);
+        loadingState.classList.remove('visible');
+        document.getElementById('shortenBtn').disabled = false;
+        showToast('Network error: ' + err.message, 'error');
+      }
+    }
+
+    function copyShortUrl(btn) {
+      copyText(currentShortUrl, btn);
+    }
+
+    // ── Recent links ──
+    async function loadRecentLinks() {
+      const res = await API.links();
+      const container = document.getElementById('recentLinks');
+
+      if (!res.success || !res.data.links.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔗</div>
+            <p>No links yet. Shorten your first URL above.</p>
+          </div>`;
+        return;
+      }
+
+      const recent = res.data.links.slice(0, 5);
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Short Link</th>
+                <th>Destination</th>
+                <th>Status</th>
+                <th>Clicks</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recent.map(link => `
+                <tr>
+                  <td>
+                    <a href="${link.shortUrl}" target="_blank" class="mono" style="font-size:0.85rem; color:var(--cyan)">
+                      ${link.shortCode}
+                    </a>
+                  </td>
+                  <td>
+                    <div style="font-size:0.88rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-dim)" title="${link.originalUrl}">
+                      ${link.title || truncateUrl(link.originalUrl, 45)}
+                    </div>
+                  </td>
+                  <td>${statusBadge(link.integrityStatus)}</td>
+                  <td><span class="mono" style="font-size:0.88rem">${link.clickCount}</span></td>
+                  <td><span style="font-size:0.82rem; color:var(--text-muted)">${timeAgo(link.createdAt)}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // Enter key handler
+    document.getElementById('urlInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleShorten();
+    });
+
+    // ── QR Code ──
+    function generateQR() {
+      if (!currentShortUrl) {
+        showToast('No short URL to generate QR for', 'error');
+        return;
+      }
+
+      const qr = qrcode(0, 'M');
+      qr.addData(currentShortUrl);
+      qr.make();
+
+      const canvas = document.getElementById('qrCanvas');
+      const ctx = canvas.getContext('2d');
+      const cellSize = 8;
+      const moduleCount = qr.getModuleCount();
+      const size = moduleCount * cellSize;
+      canvas.width = size;
+      canvas.height = size;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.fillStyle = '#0a0e1a';
+      for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      document.getElementById('qrUrlLabel').textContent = currentShortUrl;
+      document.getElementById('qrContainer').classList.add('visible');
+      document.getElementById('qrContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      showToast('QR code generated!', 'success');
+    }
+
+    function downloadQR() {
+      const canvas = document.getElementById('qrCanvas');
+      const link = document.createElement('a');
+      link.download = 'linkguard-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function closeQR() {
+      document.getElementById('qrContainer').classList.remove('visible');
+    }
+
+    // Load on start
+    loadRecentLinks();
+  </script>
+</body>
+</html>

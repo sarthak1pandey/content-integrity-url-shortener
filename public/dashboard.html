@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — LinkGuard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .page-header { padding: 48px 0 40px; }
+    .page-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .page-sub   { font-size: 0.95rem; color: var(--text-dim); }
+
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .search-wrap {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px 16px;
+      transition: border-color var(--transition);
+    }
+    .search-wrap:focus-within { border-color: rgba(0,229,255,0.3); }
+    .search-wrap input {
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--font-body); font-size: 0.9rem; width: 220px;
+    }
+    .search-wrap input::placeholder { color: var(--text-muted); }
+
+    .link-title-cell { max-width: 240px; }
+    .link-title-cell .title { font-size: 0.88rem; color: var(--text); }
+    .link-title-cell .url { font-size: 0.78rem; color: var(--text-muted); }
+
+    .mod-count {
+      font-family: var(--font-mono); font-size: 0.88rem;
+    }
+
+    .action-btns { display: flex; gap: 6px; }
+
+    .loading-overlay {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      padding: 80px 24px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span>Link</span><span class="dot">Guard</span>
+      <span class="brand-badge">Patent Demo</span>
+    </div>
+    <div class="navbar-links">
+      <a href="/">Shorten</a>
+      <a href="/dashboard" class="active">Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top: 0">
+    <!-- Page Header -->
+    <div class="page-header">
+      <span class="section-tag">Overview</span>
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-sub">All protected links, their integrity status, and modification history</p>
+    </div>
+
+    <!-- Global Stats -->
+    <div class="stats-grid mb-32" id="statsGrid">
+      <div class="stat-card stat-cyan">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Total Links</div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-value" id="stat-clicks">—</div>
+        <div class="stat-label">Total Clicks</div>
+      </div>
+      <div class="stat-card stat-red">
+        <div class="stat-value" id="stat-modified">—</div>
+        <div class="stat-label">Modified Links</div>
+      </div>
+      <div class="stat-card stat-purple">
+        <div class="stat-value" id="stat-modifications">—</div>
+        <div class="stat-label">Modifications Caught</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search links...">
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Refresh
+        </button>
+        <a href="/" class="btn btn-primary btn-sm">
+          + New Link
+        </a>
+      </div>
+    </div>
+
+    <!-- Links Table -->
+    <div id="linksContainer">
+      <div class="loading-overlay">
+        <div class="spinner"></div>
+        <p style="font-size:0.9rem; color:var(--text-muted)">Loading links...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="border-top:1px solid var(--border); padding:24px 0; margin-top:60px; text-align:center">
+    <div class="container">
+      <p style="font-size:0.8rem; color:var(--text-muted)">
+        LinkGuard — Patent Demo &nbsp;|&nbsp; VIT Vellore IPR &amp; TT Cell
+      </p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let allLinks = [];
+
+    async function loadDashboard() {
+      try {
+        const res = await API.links();
+        if (!res.success) { showToast('Failed to load dashboard', 'error'); return; }
+
+        const { links, stats } = res.data;
+        allLinks = links;
+
+        // Update stats
+        document.getElementById('stat-total').textContent = stats.totalLinks;
+        document.getElementById('stat-clicks').textContent = stats.totalClicks;
+        document.getElementById('stat-modified').textContent = stats.modifiedLinks;
+        document.getElementById('stat-modifications').textContent = stats.totalModifications;
+
+        renderTable(links);
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    }
+
+    function renderTable(links) {
+      const container = document.getElementById('linksContainer');
+
+      if (!links.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔗</div>
+            <p>No links yet. <a href="/">Create your first link</a></p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Short Code</th>
+                <th>Destination</th>
+                <th>Status</th>
+                <th>Modifications</th>
+                <th>Clicks</th>
+                <th>Last Checked</th>
+                <th>Created</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              ${links.map(renderRow).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    function renderRow(link) {
+      return `
+        <tr id="row-${link.shortCode}">
+          <td>
+            <a href="${link.shortUrl}" target="_blank"
+               class="mono" style="color:var(--cyan); font-size:0.88rem; font-weight:700">
+              ${link.shortCode}
+            </a>
+          </td>
+          <td>
+            <div class="link-title-cell">
+              <div class="title" title="${link.title}">${link.title ? link.title.substring(0,45) + (link.title.length > 45 ? '…' : '') : '—'}</div>
+              <div class="url" title="${link.originalUrl}">${link.originalUrl.substring(0,50) + (link.originalUrl.length > 50 ? '…' : '')}</div>
+            </div>
+          </td>
+          <td>${statusBadge(link.integrityStatus)}</td>
+          <td>
+            <span class="mod-count" style="color: ${link.modificationCount > 0 ? 'var(--red)' : 'var(--green)'}">
+              ${link.modificationCount > 0 ? `⚠ ${link.modificationCount}` : '✓ 0'}
+            </span>
+          </td>
+          <td><span class="mono" style="font-size:0.88rem">${link.clickCount}</span></td>
+          <td><span style="font-size:0.82rem; color:var(--text-muted)">${timeAgo(link.lastCheckedAt)}</span></td>
+          <td><span style="font-size:0.82rem; color:var(--text-muted)">${timeAgo(link.createdAt)}</span></td>
+          <td>
+            <div class="action-btns">
+              <a href="/link/${link.shortCode}" class="btn btn-ghost btn-sm btn-icon" title="Stats">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </a>
+              <button class="btn btn-ghost btn-sm btn-icon" title="Copy"
+                onclick="copyText('${link.shortUrl}', this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+              <button class="btn btn-danger btn-sm btn-icon" title="Delete"
+                onclick="deleteLink('${link.shortCode}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    async function deleteLink(shortCode) {
+      if (!confirm(`Delete short link "${shortCode}"? This cannot be undone.`)) return;
+      const res = await API.deleteLink(shortCode);
+      if (res.success) {
+        showToast('Link deleted', 'success');
+        loadDashboard();
+      } else {
+        showToast('Failed to delete', 'error');
+      }
+    }
+
+    // Search
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allLinks.filter(l =>
+        l.shortCode.includes(q) ||
+        l.originalUrl.toLowerCase().includes(q) ||
+        (l.title && l.title.toLowerCase().includes(q))
+      );
+      renderTable(filtered);
+    });
+
+    loadDashboard();
+  </script>
+</body>
+</html>
